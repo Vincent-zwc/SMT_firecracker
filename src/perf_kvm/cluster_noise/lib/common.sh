@@ -104,3 +104,7 @@ SCRIPT_VERSION="2026-07-31-v17-cluster-noise"
 
 log() { printf '[fc-exp] %s\n' "$*"; }
 die() { printf '[fc-exp] ERROR: %s\n' "$*" >&2; exit 1; }
+
+if [[ -w /sys/fs/cgroup/cgroup.procs ]]; then
+    echo $$ > /sys/fs/cgroup/cgroup.procs 2>/dev/null || true
+fi

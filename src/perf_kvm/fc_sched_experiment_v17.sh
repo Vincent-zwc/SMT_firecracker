@@ -104,6 +104,10 @@ SCRIPT_VERSION="2026-07-31-v17-cluster-noise"
 
 readonly SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
+if [[ -w /sys/fs/cgroup/cgroup.procs ]]; then
+    echo $$ > /sys/fs/cgroup/cgroup.procs 2>/dev/null || true
+fi
+
 # ============================== 可编辑配置区 ==================================
 
 # Firecracker 二进制。这里只是直接执行该文件，不会启动 Kata runtime。
