@@ -108,7 +108,10 @@ def write_xlsx(runs, path):
     other = [c for c in df.columns if c not in lead]
     df = df[lead + other]
     for c in other:
-        df[c] = pd.to_numeric(df[c], errors="ignore")
+        try:
+            df[c] = pd.to_numeric(df[c])
+        except (ValueError, TypeError):
+            pass
 
     metrics = [
         "wall_s", "oncpu_s", "guest_running_s", "host_vcpu_running_s",
