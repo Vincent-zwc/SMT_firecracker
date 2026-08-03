@@ -167,7 +167,7 @@ def write_xlsx(runs, path):
                 batch_csv = HERE / "cluster_noise_table.csv"
             if batch_csv.exists():
                 pd.read_csv(batch_csv).to_excel(
-                    w, sheet=f"batch_{mode}"[:31], index=False
+                    w, sheet_name=f"batch_{mode}"[:31], index=False
                 )
 
         for ws in w.book.worksheets:
