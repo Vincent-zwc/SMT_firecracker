@@ -211,8 +211,8 @@ declare -a VM_ROOTFS VM_API_SOCKET VM_STDIN_FIFO
 
 # cluster 噪声 VM 的运行期信息，与核0 VM 数组平行但独立下标，避免和 perf 过滤
 # 用的 target/background 编号混在一起。NOISE_CPU[$i] 记录该 VM 独占的核。
-declare -a NOISE_PID NOISE_CPU NOISE_WL NOISE_ROOTFS NOISE_CONSOLE_LOG
-declare -a NOISE_INPUT_FD NOISE_API_SOCKET NOISE_STDIN_FIFO
+declare -a NOISE_PID=() NOISE_CPU=() NOISE_WL=() NOISE_ROOTFS=() NOISE_CONSOLE_LOG
+declare -a NOISE_INPUT_FD=() NOISE_API_SOCKET=() NOISE_STDIN_FIFO=()
 CLUSTER_NOISE_CPU_LIST=()
 NOISE_COUNT=0
 
@@ -737,15 +737,15 @@ start_cluster_noise() {
 
 # 停止全部噪声 VM。与 stop_all_vms 同样的 TERM->KILL->wait 顺序。
 stop_cluster_noise_vms() {
-    [[ ${#NOISE_PID[@]:-0} -eq 0 ]] && return 0
+    [[ ${#NOISE_PID[@]} -eq 0 ]] && return 0
     local idx pid
-    for ((idx=0; idx<${#NOISE_PID[@]:-0}; idx++)); do
+    for ((idx=0; idx<${#NOISE_PID[@]}; idx++)); do
         pid=${NOISE_PID[$idx]:-}
         [[ -n $pid ]] || continue
         kill -TERM "$pid" 2>/dev/null || true
     done
     sleep 0.2
-    for ((idx=0; idx<${#NOISE_PID[@]:-0}; idx++)); do
+    for ((idx=0; idx<${#NOISE_PID[@]}; idx++)); do
         pid=${NOISE_PID[$idx]:-}
         [[ -n $pid ]] || continue
         kill -KILL "$pid" 2>/dev/null || true

@@ -135,15 +135,15 @@ start_cluster_noise() {
 
 # 停止全部噪声 VM。与 stop_all_vms 同样的 TERM->KILL->wait 顺序。
 stop_cluster_noise_vms() {
-    [[ ${#NOISE_PID[@]:-0} -eq 0 ]] && return 0
+    [[ ${#NOISE_PID[@]} -eq 0 ]] && return 0
     local idx pid
-    for ((idx=0; idx<${#NOISE_PID[@]:-0}; idx++)); do
+    for ((idx=0; idx<${#NOISE_PID[@]}; idx++)); do
         pid=${NOISE_PID[$idx]:-}
         [[ -n $pid ]] || continue
         kill -TERM "$pid" 2>/dev/null || true
     done
     sleep 0.2
-    for ((idx=0; idx<${#NOISE_PID[@]:-0}; idx++)); do
+    for ((idx=0; idx<${#NOISE_PID[@]}; idx++)); do
         pid=${NOISE_PID[$idx]:-}
         [[ -n $pid ]] || continue
         kill -KILL "$pid" 2>/dev/null || true
