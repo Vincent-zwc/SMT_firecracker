@@ -1,0 +1,27 @@
+# 实验数据与日志(在远程机器产生, 不入库)
+results/
+batch_logs/
+batch_logs_*/
+*.log
+
+# 汇总表与导出
+cluster_noise_table*.csv
+cluster_noise_summary*.csv
+cluster_noise_summary*.xlsx
+
+# 内核与镜像(体积大, 不入库)
+ub_latency/
+*.ext4
+vmlinux*
+vmlinuz*
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
