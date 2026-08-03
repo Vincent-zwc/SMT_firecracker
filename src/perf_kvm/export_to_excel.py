@@ -149,7 +149,7 @@ def write_xlsx(runs, path):
                 pivot["wall_s_delta_s"] = pivot["wall_s_noise"] - pivot["wall_s_baseline"]
                 pivot["wall_s_delta_pct"] = 100 * pivot["wall_s_delta_s"] / pivot["wall_s_baseline"]
             sheet = f"compare_{mode}"[:31]  # excel sheet 名 <=31 字符
-            pivot.reset_index().to_excel(w, sheet=sheet, index=False)
+            pivot.reset_index().to_excel(w, sheet_name=sheet, index=False)
 
         # Sheet 3: 跨 mode 对比(n5 vs n5_fifo 的 wall_s 与 delta%)
         if len(modes) >= 2:
@@ -158,7 +158,7 @@ def write_xlsx(runs, path):
                 values="wall_s", aggfunc="first",
             )
             cross.columns = [f"{m}_{t}" for m, t in cross.columns]
-            cross.reset_index().to_excel(w, sheet="cross_mode_wall_s", index=False)
+            cross.reset_index().to_excel(w, sheet_name="cross_mode_wall_s", index=False)
 
         # Sheet 4: 各 mode 的 batch 汇总表
         for mode in modes:
