@@ -1,13 +1,19 @@
 # 实验数据与日志(在远程机器产生, 不入库)
-results/
+results*/
 batch_logs/
 batch_logs_*/
 *.log
+data/
+src/perfetto_sched
 
 # 汇总表与导出
-cluster_noise_table*.csv
-cluster_noise_summary*.csv
-cluster_noise_summary*.xlsx
+*.csv
+*.xlsx
+*.txt
+*.bak
+*.pid
+*temp*
+run.sh
 
 # 内核与镜像(体积大, 不入库)
 ub_latency/
