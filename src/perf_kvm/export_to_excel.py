@@ -24,12 +24,15 @@ HERE = Path(__file__).resolve().parent
 
 
 def mode_from_dirname(d):
-    # batch_logs        -> n5
-    # batch_logs_n5     -> n5
-    # batch_logs_n5_fifo-> n5_fifo
+    # batch_logs            -> n5
+    # batch_logs_n5         -> n5
+    # batch_logs_n5_fifo    -> n5_fifo
+    # batch_logs_n5_r1      -> n5   (多轮场景, 去掉 _rN 后缀)
+    # batch_logs_n5_fifo_r2-> n5_fifo
     name = d.name
     if name == "batch_logs":
         return "n5"
+    name = re.sub(r"_r\d+$", "", name)
     return name.replace("batch_logs_", "", 1)
 
 
