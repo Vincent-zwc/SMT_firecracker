@@ -43,8 +43,8 @@ printf '[batch] 开始: %d 轮, MODE=%s WITH_NOISE=%d\n' "$TOTAL" "$MODE" "$WITH
 idx=0
 for wl in "${WORKLOADS[@]}"; do
     for fifo in 0 1; do
-        for noise in 0 $((WITH_NOISE == 1 ? 1 : 0)); do
-            [[ $noise == 0 || $WITH_NOISE == 1 ]] || continue
+        for noise in 0 1; do
+            [[ $noise == 1 && $WITH_NOISE == 0 ]] && continue
             idx=$((idx + 1))
             tag=$([ $fifo == 1 ] && echo fifo || echo cfs)
             [[ $noise == 1 ]] && tag="${tag}_noise" || tag="${tag}_base"

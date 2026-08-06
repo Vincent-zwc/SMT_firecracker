@@ -8,15 +8,22 @@
 #   sudo ./run_perf_stat_standalone.sh <workload> [mode] [round]
 #   mode: n1(单VM) 或 n5(target+3background超分)，默认 n1
 #
-# 示例:
-#   sudo ./run_perf_stat_standalone.sh joke2k__faker-2007 n1
-#   sudo ./run_perf_stat_standalone.sh SpikeInterface__spikeinterface-1057 n5
-#
 # 环境变量:
+#   SCHED_FIFO=1               启用 SCHED_FIFO/50 (默认 0=CFS)
+#   CLUSTER_NOISE_CPUS=96,...  启用 cluster noise (默认空=不启用)
+#   CLUSTER_NOISE_WORKLOAD     noise VM 跑的 workload (默认 joke2k__faker-2007)
+#   CLUSTER_NOISE_WARMUP       noise 预热秒数 (默认 10)
 #   TARGET_CPU=102 HOUSEKEEPING_CPU=112
 #   FIRECRACKER_BIN=/opt/kata/bin/firecracker
-#   KERNEL_IMAGE=$SCRIPT_DIR/ub_latency/vmlinux-fc-arm64
-#   IMAGE_DIR=$SCRIPT_DIR/ub_latency/ext4
+#   KERNEL_IMAGE=$PERF_KVM_DIR/ub_latency/vmlinux-fc-arm64
+#   IMAGE_DIR=$PERF_KVM_DIR/ub_latency/ext4
+#
+# 示例:
+#   sudo ./run_perf_stat_standalone.sh faker n5                         # CFS 超分
+#   sudo SCHED_FIFO=1 ./run_perf_stat_standalone.sh faker n5            # FIFO 超分
+#   sudo CLUSTER_NOISE_CPUS=96,98,100,104,106,108,110 \
+#     SCHED_FIFO=1 ./run_perf_stat_standalone.sh faker n5               # FIFO + noise
+#   sudo ./run_perf_stat_standalone.sh faker n1                         # CFS 单VM
 
 set -Eeuo pipefail
 export LC_ALL=C
