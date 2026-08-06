@@ -22,12 +22,13 @@ set -Eeuo pipefail
 export LC_ALL=C
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+PERF_KVM_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # ============================ 配置 ============================================
 FIRECRACKER_BIN=${FIRECRACKER_BIN:-/opt/kata/bin/firecracker}
-KERNEL_IMAGE=${KERNEL_IMAGE:-"$SCRIPT_DIR/ub_latency/vmlinux-fc-arm64"}
-IMAGE_DIR=${IMAGE_DIR:-"$SCRIPT_DIR/ub_latency/ext4"}
-RESULTS_DIR=${RESULTS_DIR:-"$SCRIPT_DIR/results_perf_stat"}
+KERNEL_IMAGE=${KERNEL_IMAGE:-"$PERF_KVM_DIR/ub_latency/vmlinux-fc-arm64"}
+IMAGE_DIR=${IMAGE_DIR:-"$PERF_KVM_DIR/ub_latency/ext4"}
+RESULTS_DIR=${RESULTS_DIR:-"$PERF_KVM_DIR/results_perf_stat"}
 
 TARGET_CPU=${TARGET_CPU:-102}
 HOUSEKEEPING_CPU=${HOUSEKEEPING_CPU:-112}
