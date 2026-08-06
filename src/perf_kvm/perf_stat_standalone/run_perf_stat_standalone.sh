@@ -36,6 +36,10 @@ MEM_MIB=${MEM_MIB:-1024}
 READY_TIMEOUT=${READY_TIMEOUT:-120}
 TARGET_TIMEOUT=${TARGET_TIMEOUT:-600}
 
+CLUSTER_NOISE_CPUS=${CLUSTER_NOISE_CPUS:-}
+CLUSTER_NOISE_WORKLOAD=${CLUSTER_NOISE_WORKLOAD:-joke2k__faker-2007}
+CLUSTER_NOISE_WARMUP=${CLUSTER_NOISE_WARMUP:-10}
+
 # workload 表: name|ext4|repo|commit|replay
 WORKLOAD_TABLE=(
     "SpikeInterface__spikeinterface-1057|base-spikeinterface.ext4|/workspace/SpikeInterface__spikeinterface__0.96|7268ab900443ca3f0239de3007352d05f2d7d875|/generated_replay.sh"
@@ -217,6 +221,8 @@ declare -a VM_API_SOCK=()
 
 launch_vm() {
     local vm_index=$1 role=$2 name=$3 repo=$4 commit=$5 replay=$6
+    local cpu=${7:-$TARGET_CPU}
+    local rootfs_base=${8:-$ROOTFS_BASE}
     local rootfs_copy config_file stdin_fifo console_log api_socket input_fd boot_args
 
     rootfs_copy="$RUN_DIR/work/vm${vm_index}_${name}.ext4"
@@ -229,9 +235,9 @@ launch_vm() {
     VM_API_SOCK[$vm_index]=$api_socket
     VM_CONSOLE[$vm_index]=$console_log
 
-    log "启动 VM[$vm_index] role=$role workload=$name"
+    log "启动 VM[$vm_index] role=$role workload=$name cpu=$cpu"
 
-    cp --reflink=auto --sparse=always "$ROOTFS_BASE" "$rootfs_copy"
+    cp --reflink=auto --sparse=always "$rootfs_base" "$rootfs_copy"
 
     debugfs -w -R 'rm /fc-exp-init.sh' "$rootfs_copy" >>"$RUN_DIR/debugfs.log" 2>&1 || true
     debugfs -w -R "write $RUN_DIR/guest-init.sh /fc-exp-init.sh" "$rootfs_copy" >>"$RUN_DIR/debugfs.log" 2>&1
@@ -245,7 +251,7 @@ launch_vm() {
     mkfifo "$stdin_fifo"
     exec {input_fd}<>"$stdin_fifo"
 
-    taskset -c "$TARGET_CPU" "$FIRECRACKER_BIN" \
+    taskset -c "$cpu" "$FIRECRACKER_BIN" \
         --api-sock "$api_socket" --config-file "$config_file" \
         <&"$input_fd" >"$console_log" 2>&1 &
     local fc_pid=$!
@@ -258,14 +264,50 @@ launch_vm() {
         die "VM[$vm_index] 未进入 READY: $name"
     fi
 
-    taskset -a -pc "$TARGET_CPU" "$fc_pid" >/dev/null
+    taskset -a -pc "$cpu" "$fc_pid" >/dev/null
     chrt -a -o -p 0 "$fc_pid" >/dev/null
 
-    log "VM[$vm_index] READY pid=$fc_pid role=$role"
+    log "VM[$vm_index] READY pid=$fc_pid role=$role cpu=$cpu"
 }
 
 send_go() {
     printf 'GO\n' >&"${VM_INPUT_FD[$1]}"
+}
+
+start_cluster_noise() {
+    [[ -z $CLUSTER_NOISE_CPUS ]] && return 0
+
+    local noise_found=0 noise_name noise_ext4 noise_repo noise_commit noise_replay
+    for entry in "${WORKLOAD_TABLE[@]}"; do
+        IFS='|' read -r name ext4 repo commit replay <<< "$entry"
+        if [[ $name == "$CLUSTER_NOISE_WORKLOAD" ]]; then
+            noise_found=1
+            noise_name=$name; noise_ext4=$ext4; noise_repo=$repo
+            noise_commit=$commit; noise_replay=$replay
+            break
+        fi
+    done
+    [[ $noise_found == 1 ]] || die "noise workload 不在表中: $CLUSTER_NOISE_WORKLOAD"
+
+    local noise_rootfs="$IMAGE_DIR/$noise_ext4"
+    [[ -f $noise_rootfs ]] || die "noise ext4 不存在: $noise_rootfs"
+
+    local noise_cpus=()
+    IFS=',' read -ra noise_cpus <<< "$CLUSTER_NOISE_CPUS"
+
+    local idx=0 cpu
+    for cpu in "${noise_cpus[@]}"; do
+        idx=$((idx + 1))
+        local vm_idx=$((100 + idx))
+        launch_vm "$vm_idx" background "$noise_name" "$noise_repo" \
+            "$noise_commit" "$noise_replay" "$cpu" "$noise_rootfs"
+        send_go "$vm_idx"
+        wait_for_marker "${VM_CONSOLE[$vm_idx]}" \
+            "FC_BACKGROUND_STARTED name=$noise_name" \
+            "${VM_PIDS[$vm_idx]}" "$READY_TIMEOUT" || \
+            die "noise VM[$idx] 未启动: cpu=$cpu"
+    done
+    log "cluster noise 已就绪 count=$idx cpus=$CLUSTER_NOISE_CPUS"
 }
 
 stop_all_vms() {
@@ -319,6 +361,13 @@ if [[ $MODE == n5 ]]; then
     done
     log "background 预热 10s"
     sleep 10
+fi
+
+# 启动 cluster noise（邻近核 L3 干扰）
+if [[ -n $CLUSTER_NOISE_CPUS ]]; then
+    start_cluster_noise
+    log "cluster noise 预热 ${CLUSTER_NOISE_WARMUP}s"
+    sleep "$CLUSTER_NOISE_WARMUP"
 fi
 
 # 启动 target
@@ -400,6 +449,8 @@ print(f'{tc/w*100:.2f}' if w>0 else 'N/A')
     echo "target_tid            = $TARGET_TID"
     echo "target_rc             = ${TARGET_RC:-unknown}"
     echo "sched_fifo            = ${SCHED_FIFO:-0}"
+    echo "cluster_noise_cpus    = $CLUSTER_NOISE_CPUS"
+    echo "cluster_noise_workload= $CLUSTER_NOISE_WORKLOAD"
     echo ""
     echo "--- on-CPU time (3 种方法) ---"
     echo "  perf_stat_task_clock_s = $ONCPU_TC"
@@ -425,6 +476,8 @@ print(f'{tc/w*100:.2f}' if w>0 else 'N/A')
     echo "mode=$MODE"
     echo "round=$ROUND_ID"
     echo "sched_fifo=${SCHED_FIFO:-0}"
+    echo "cluster_noise_cpus=$CLUSTER_NOISE_CPUS"
+    echo "cluster_noise_workload=$CLUSTER_NOISE_WORKLOAD"
     echo "wall_s=$WALL_SEC"
     echo "oncpu_task_clock_s=$ONCPU_TC"
     echo "oncpu_cpu_clock_s=$ONCPU_CPU_CLOCK"
@@ -435,6 +488,7 @@ print(f'{tc/w*100:.2f}' if w>0 else 'N/A')
 
 log "完成 run_dir=$RUN_DIR"
 
-printf 'PERF_STAT_RESULT,%s,%s,%s,%s,%s,%s,%s,%s\n' \
+printf 'PERF_STAT_RESULT,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
     "$WL_NAME" "$MODE" "$ROUND_ID" "${SCHED_FIFO:-0}" \
+    "${CLUSTER_NOISE_CPUS:+1}" \
     "$WALL_SEC" "$ONCPU_TC" "$ONCPU_CPU_CLOCK" "$ONCPU_US"
